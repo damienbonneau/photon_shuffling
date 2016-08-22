@@ -8,7 +8,7 @@ UP = 0
 DOWN = 1
 
 
-def populate_staircase(orbitsize, N, closed_boundary = False):
+def populate_staircase(orbitsize, N, closed_boundary = True):
         matrix = zeros((N,N))
         for i in range(N-orbitsize):
             matrix[i , i:i + orbitsize] = 1
@@ -58,6 +58,7 @@ class SwitchNetwork():
         self.matrix = switch_matrix
         self.generate_cycling_matrices()
         self._cache_accessible_coords = {}
+        self._cache_accessible_outputs = {}
     # Horizontal and vertical cycling matrices
     # Store the column / line number to jump to next
     def generate_cycling_matrices(self):        
@@ -135,7 +136,6 @@ class SwitchNetwork():
             # So all the accessible coordinates are within the lines which are accessible from the current column
             column_cycle = self.get_column_cycle(i0)
             col_size = len(column_cycle)
-            print j0,column_cycle
             if j0 not in column_cycle:
                 list_positions = []
             else:
@@ -147,7 +147,7 @@ class SwitchNetwork():
                     line_cycle =  self.get_line_cycle(j)
                     line_size = len(line_cycle)
                     index_i0 = np.where(line_cycle == i0)[0][0]
-                    print j ,"->", line_cycle, index_i0
+                    #print j ,"->", line_cycle, index_i0
                     
                     j_dist = (index_j-index_j0 +col_size) % col_size
                     i_dists = [(index_i-index_i0 +line_size) % line_size for index_i in range(line_size) ]
@@ -158,11 +158,33 @@ class SwitchNetwork():
             
         return self._cache_accessible_coords[init_pos]
             
-       
+    def get_accessible_outputs(self,pos):
+        if not self._cache_accessible_outputs.has_key(pos):
+            coords_distance = self.get_accessible_coords(pos)
+            accessible_coords = [(i,j) for i,j,_,_ in coords_distance]
+            accessible_outputs = []
+            for group in self.target_groups:
+                for coord in group:
+                    if coord in accessible_coords:
+                        accessible_outputs += [coords_distance[accessible_coords.index(coord)]]
+            self._cache_accessible_outputs[pos] = accessible_outputs
+        return self._cache_accessible_outputs[pos]
         
     def get_sample(self):
         sample = zeros(self.matrix.shape, dtype = int)  
         sample[self.matrix >0] = array( [random.rand() < self.p for x in range(self.nb_sources) ]) #self.nb_sources
+        
+        DEBUG = 1
+        if DEBUG:
+            l_potential_outputs = []
+            anz = np.nonzero(sample)
+            #print zip(anz[0],anz[1])
+            for pos in  zip(anz[0],anz[1]):  
+
+                l_potential_outputs = self.get_accessible_outputs(pos)
+
+                print pos, "->", l_potential_outputs
+            
         return sample        
         
 
