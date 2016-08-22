@@ -44,6 +44,7 @@ class SwitchVisu():
         self.photon_sprite.fill((0,125,0))
         self.cycle_area_sprite.fill((20,20,20))
             
+        self._cache_text = {}
         
     def toggle(self):
         if self.status == CYCLING_COLUMN:
@@ -119,28 +120,44 @@ class SwitchVisu():
                 if self.sample[i,j] == 1:
                     self.screen.blit(self.photon_sprite,pos)
         
+        
+        # Draw accessible places
+        for i,j,di,dj in self.switch.get_accessible_coords(tuple(self.cursor_pos)):
+            x,y = w*i,h*j
+            pg.draw.rect(self.screen, (150,150,150),(x+1,y-1,w-2,h-2),  3)  
+
+            if pg.font:
+                font = pg.font.Font(None, 12)
+                if not self._cache_text.has_key((di,dj)):
+                    self._cache_text[(di,dj)] = font.render("%d,%d" % (di,dj), 1, (255, 0, 0))
+                
+                text = self._cache_text[(di,dj)] 
+                textpos = text.get_rect(centerx=x+w/2,centery = y+h/2)
+                self.screen.blit(text, textpos)
+            
+        
         # Draw groups
         group_colours = [(120,50,50),(255,50,50)]
         k = 0
         for group in self.switch.target_groups:
             for i,j in group:
                 x,y = w*i,h*j
-                pg.draw.rect(self.screen, group_colours[k % len(group_colours)],(x,y,w,h),  1)        
+                pg.draw.rect(self.screen, group_colours[k % len(group_colours)],(x,y,w,h),  3)        
         
             k += 1
         
+              
+        
         # Draw cursor
         x,y = w*self.cursor_pos[0],h*self.cursor_pos[1]
-        pg.draw.rect(self.screen, (255,255,255),(x+1,y-1,w-2,h-2),  1)        
+        pg.draw.rect(self.screen, (0,125,255),(x+1,y-1,w-2,h-2), 3)        
         
         
         
     def MainLoop(self):
-        """tell pygame to keep sending up keystrokes when they are
-        held down"""
+        # tell pygame to keep sending up keystrokes when they are held down
         pg.key.set_repeat(500, 30)
         
-        """Create the background"""
         self.background = pg.Surface(self.screen.get_size())
         self.background = self.background.convert()
         self.background.fill((0,0,0))

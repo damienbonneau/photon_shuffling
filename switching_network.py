@@ -1,4 +1,5 @@
 from numpy import *
+import numpy as np
 import sys
 
 LEFT = 0
@@ -56,7 +57,7 @@ class SwitchNetwork():
         self.target_groups = target_groups
         self.matrix = switch_matrix
         self.generate_cycling_matrices()
-        
+        self._cache_accessible_coords = {}
     # Horizontal and vertical cycling matrices
     # Store the column / line number to jump to next
     def generate_cycling_matrices(self):        
@@ -118,6 +119,46 @@ class SwitchNetwork():
             indices_to_replace  = (self.column_cycle[line_index,:])[new_indices]
         network_instance[line_index,indices_to_replace] = network_instance[line_index,new_indices]
         return network_instance
+     
+    
+    def get_column_cycle(self,column_index):
+        return self.column_cycle[column_index,:][self.column_cycle[column_index,:] >=0]
+    
+    def get_line_cycle(self,line_index):
+        return self.line_cycle[:,line_index][self.line_cycle[:,line_index] >=0]
+    
+    
+    def get_accessible_coords(self,init_pos):
+        if not self._cache_accessible_coords.has_key(init_pos):
+            i0,j0 = init_pos
+            # we always rotate within a column first and then within the line
+            # So all the accessible coordinates are within the lines which are accessible from the current column
+            column_cycle = self.get_column_cycle(i0)
+            col_size = len(column_cycle)
+            print j0,column_cycle
+            if j0 not in column_cycle:
+                list_positions = []
+            else:
+                index_j0 = np.where(column_cycle == j0)[0][0]
+                list_positions = [] # Also would need the distance from the current position (x,y,dx,dy) x,y : new accessible position ; dx,dy : number of cycles required to get there (one column and one line)
+                index_j = 0
+                
+                for j in column_cycle:
+                    line_cycle =  self.get_line_cycle(j)
+                    line_size = len(line_cycle)
+                    index_i0 = np.where(line_cycle == i0)[0][0]
+                    print j ,"->", line_cycle, index_i0
+                    
+                    j_dist = (index_j-index_j0 +col_size) % col_size
+                    i_dists = [(index_i-index_i0 +line_size) % line_size for index_i in range(line_size) ]
+                    
+                    list_positions += [(line_cycle[index_i],j,i_dists[index_i],j_dist) for index_i in range(line_size)] 
+                    index_j += 1
+            self._cache_accessible_coords[init_pos] = list_positions
+            
+        return self._cache_accessible_coords[init_pos]
+            
+       
         
     def get_sample(self):
         sample = zeros(self.matrix.shape, dtype = int)  
